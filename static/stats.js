@@ -5,6 +5,9 @@ const SUPER_JUNIORS = [
   { id: "constance", label: "Constance + Gallant", caster: /constance/i, jack: /^gallant$/i },
 ];
 
+const DEFENSES = ["Barrier", "Fire Pit", "Spike Trap", "Powder Keg"];
+const DEFENSE_RE = /^DEFENSE OPTION\s+\d+\s*-\s*(Barrier|Fire Pit|Spike Trap|Powder Keg)$/i;
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -28,6 +31,12 @@ function entryNames(list) {
 function hasSuperJunior(list, pack) {
   const names = entryNames(list);
   return names.some((n) => pack.caster.test(n)) && names.some((n) => pack.jack.test(n));
+}
+
+function defenseType(name) {
+  const match = DEFENSE_RE.exec((name || "").trim());
+  if (!match) return null;
+  return DEFENSES.find((label) => label.toLowerCase() === match[1].toLowerCase()) || match[1];
 }
 
 function countMap(values) {
@@ -87,6 +96,28 @@ function collect(data) {
     return { ...pack, n: hits.length, hosts };
   });
 
+  const defenses = Object.fromEntries(DEFENSES.map((label) => [label, 0]));
+  const defensesByPlayer = Object.fromEntries(DEFENSES.map((label) => [label, 0]));
+  for (const row of lists) {
+    for (const entry of row.list.entries || []) {
+      const type = defenseType(entry.name);
+      if (!type) continue;
+      defenses[type] = (defenses[type] || 0) + 1;
+    }
+  }
+  for (const player of players) {
+    const types = new Set();
+    for (const list of player.lists || []) {
+      for (const entry of list.entries || []) {
+        const type = defenseType(entry.name);
+        if (type) types.add(type);
+      }
+    }
+    for (const type of types) {
+      defensesByPlayer[type] = (defensesByPlayer[type] || 0) + 1;
+    }
+  }
+
   const pairs = countMap(
     twoList.map((p) => {
       const names = p.lists.slice(0, 2).map((l) => (l.caster || "Unknown").trim()).sort();
@@ -113,6 +144,8 @@ function collect(data) {
     juniors,
     pairs,
     anyJunior: lists.filter((row) => SUPER_JUNIORS.some((pack) => hasSuperJunior(row.list, pack))).length,
+    defenses,
+    defensesByPlayer,
   };
 }
 
@@ -164,6 +197,14 @@ async function init() {
     stats.juniors.map((j) => ({ label: j.label, n: j.n })),
     stats.lists
   );
+  const defenseTotal = Object.values(stats.defenses).reduce((sum, n) => sum + n, 0);
+  document.getElementById("chart-defenses").innerHTML = defenseTotal
+    ? hbar(ranked(stats.defenses), defenseTotal)
+    : `<p class="hint">No Barrier, Fire Pit, Spike Trap, or Powder Keg entries in this snapshot.</p>`;
+  const defensePlayerTotal = Object.values(stats.defensesByPlayer).reduce((sum, n) => sum + n, 0);
+  document.getElementById("chart-defenses-players").innerHTML = defensePlayerTotal
+    ? hbar(ranked(stats.defensesByPlayer), defensePlayerTotal)
+    : `<p class="hint">No players took Barrier, Fire Pit, Spike Trap, or Powder Keg in this snapshot.</p>`;
   document.getElementById("chart-top-casters").innerHTML = hbar(ranked(stats.casters).slice(0, 15), stats.lists);
   document.getElementById("chart-pairs").innerHTML = hbar(ranked(stats.pairs).slice(0, 12), stats.twoList);
 

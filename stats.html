@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="static/style.css?v=21">
+  <link rel="stylesheet" href="static/style.css?v=30">
 </head>
 <body class="stats-page">
   <header class="topbar">
@@ -50,6 +50,15 @@
     </section>
 
     <section class="stats-card">
+      <h3>Defenses</h3>
+      <p class="hint">Copies taken in lists. Barrier, Fire Pit, Spike Trap, and Powder Keg. A list can take more than one.</p>
+      <div id="chart-defenses"></div>
+      <h3>Defenses by player</h3>
+      <p class="hint">Players who take each type in at least one list. Two Barriers on the same player still count as one.</p>
+      <div id="chart-defenses-players"></div>
+    </section>
+
+    <section class="stats-card">
       <h3>Caster share by army</h3>
       <p class="hint">How the lists in one army split across warcasters.</p>
       <label class="field">
@@ -77,6 +86,6 @@
     <p><a href="index.html">Back to the app</a> · <a href="privacy.html">Privacy Policy</a></p>
   </footer>
 
-  <script src="static/stats.js?v=2"></script>
+  <script src="static/stats.js?v=4"></script>
 </body>
 </html>

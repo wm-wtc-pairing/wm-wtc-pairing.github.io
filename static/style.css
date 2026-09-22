@@ -987,6 +987,7 @@ details.matrix-wrap { margin-top: 0.6rem; color: var(--muted); font-size: 0.85re
   padding: 1.1rem 1.15rem 1.2rem;
 }
 .stats-card h3 { font-size: 1.35rem; margin-bottom: 0.25rem; }
+.stats-card h3:not(:first-child) { margin-top: 1.4rem; }
 .stats-card .field { max-width: 320px; margin: 0.7rem 0 0.85rem; }
 .stats-split { margin-top: 1rem; }
 
