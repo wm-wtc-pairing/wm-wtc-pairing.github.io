@@ -289,6 +289,40 @@ function saveRatings() {
   );
 }
 
+function savedRatingKeys() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("wtc-ratings:")) keys.push(key);
+  }
+  return keys;
+}
+
+function hasSavedRatings() {
+  return Boolean(
+    savedRatingKeys().length ||
+    Object.keys(state.ratings).length ||
+    Object.keys(state.listRatings).length ||
+    Object.keys(state.listChoice).length
+  );
+}
+
+function clearSavedRatings() {
+  if (!hasSavedRatings()) {
+    toast("No saved ratings to clear.");
+    return;
+  }
+  if (!confirm("Clear all ratings saved in this browser for this site? This cannot be undone.")) return;
+  savedRatingKeys().forEach((key) => localStorage.removeItem(key));
+  state.ratings = {};
+  state.listRatings = {};
+  state.listChoice = {};
+  renderBoard();
+  renderTeamList();
+  renderProgress();
+  toast("Cleared saved ratings.");
+}
+
 function ratedCountForTeam(team) {
   return team.players.filter((p) => hasAnyRating(p.id)).length;
 }
@@ -1396,6 +1430,9 @@ function bindEvents() {
   els.prevTeam.addEventListener("click", () => shiftOppTeam(-1));
   els.nextTeam.addEventListener("click", () => shiftOppTeam(1));
   els.exportBtn.addEventListener("click", exportOwn);
+  document.addEventListener("click", (e) => {
+    if (e.target.closest(".clear-saved-btn")) clearSavedRatings();
+  });
   els.myListsBtn.addEventListener("click", () => {
     if (state.myPlayerId) openLists(state.myPlayerId);
   });
