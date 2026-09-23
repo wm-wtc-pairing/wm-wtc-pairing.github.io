@@ -1026,7 +1026,9 @@ function hideReservedScore(reserved, row, col) {
   if (!reserved) return false;
   const kept = reserved[row] === col || reserved[String(row)] === col;
   if (kept) return false;
-  return Object.values(reserved).some((j) => Number(j) === col);
+  const rowTaken = reserved[row] !== undefined || reserved[String(row)] !== undefined;
+  const colTaken = Object.values(reserved).some((j) => Number(j) === col);
+  return rowTaken || colTaken;
 }
 
 function renderPairResults() {
