@@ -1018,6 +1018,17 @@ function heatScore(n) {
   return clampScore(score);
 }
 
+function pickReserve(pick) {
+  return Object.fromEntries((pick || []).map((col, row) => [row, col]));
+}
+
+function hideReservedScore(reserved, row, col) {
+  if (!reserved) return false;
+  const kept = reserved[row] === col || reserved[String(row)] === col;
+  if (kept) return false;
+  return Object.values(reserved).some((j) => Number(j) === col);
+}
+
 function renderPairResults() {
   const data = state.pairResults;
   const tab = document.getElementById("tab-pair");
@@ -1091,7 +1102,10 @@ function renderPairResults() {
               ${r.matrix.map((row, i) => `
                 <tr>
                   <th>${escapeHtml(r.ours[i])}</th>
-                  ${row.map((v, j) => `<td class="heat-${heatScore(v)}${r.pick[i] === j ? " pick" : ""}"${manual ? ` data-assign-opp="${escapeAttr(r.id)}" data-row="${i}" data-col="${j}"` : ""}>${v}</td>`).join("")}
+                  ${row.map((v, j) => {
+                    const hide = manual && hideReservedScore(pickReserve(r.pick), i, j);
+                    return `<td class="heat-${heatScore(v)}${r.pick[i] === j ? " pick" : ""}${hide ? " hide-score" : ""}"${manual ? ` data-assign-opp="${escapeAttr(r.id)}" data-row="${i}" data-col="${j}"` : ""}>${v}</td>`;
+                  }).join("")}
                 </tr>
               `).join("")}
             </tbody>
@@ -1138,11 +1152,13 @@ function renderLivePairing(data) {
                   const isPick = r.pick[i] === j;
                   const isLock = locked[i] === j;
                   const colTaken = Object.entries(locked).some(([rowIdx, col]) => Number(rowIdx) !== i && Number(col) === j);
+                  const hide = hideReservedScore(locked, i, j);
                   const classes = [
                     `heat-${heatScore(v)}`,
                     isPick ? "pick" : "",
                     isLock ? "lock" : "",
                     colTaken ? "blocked" : "",
+                    hide ? "hide-score" : "",
                   ].filter(Boolean).join(" ");
                   return `<td class="${classes}" data-live-row="${i}" data-live-col="${j}">${v}${isLock ? "<span>LOCK</span>" : ""}</td>`;
                 }).join("")}
