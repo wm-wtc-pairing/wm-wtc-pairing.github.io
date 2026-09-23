@@ -320,6 +320,11 @@ select:focus, input:focus, .score-btn:focus-visible, .btn:focus-visible, .team-i
 .team-item.partial { box-shadow: inset 3px 0 0 var(--mid); }
 
 .sidebar-actions { display: flex; flex-direction: column; gap: 0.45rem; }
+.sidebar-clear-btn {
+  margin-top: 1.6rem;
+  align-self: stretch;
+  opacity: 0.72;
+}
 
 .btn {
   border: 1px solid transparent;
@@ -382,7 +387,6 @@ select:focus, input:focus, .score-btn:focus-visible, .btn:focus-visible, .team-i
   text-align: center;
 }
 .empty-state .rate-warn p { color: inherit; max-width: none; }
-.board-head .rate-warn { margin-top: 0.7rem; }
 
 .board-head {
   display: flex;

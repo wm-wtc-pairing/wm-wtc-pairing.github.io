@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="static/style.css?v=31">
+  <link rel="stylesheet" href="static/style.css?v=32">
 </head>
 <body>
   <header class="topbar">
@@ -65,6 +65,7 @@
             <input type="file" id="import-own" accept=".json,application/json" hidden>
           </label>
         </div>
+        <button type="button" class="btn ghost compact clear-saved-btn sidebar-clear-btn">Clear saved ratings</button>
       </aside>
 
       <div class="workspace">
@@ -83,10 +84,6 @@
               <p class="eyebrow" id="opp-region"></p>
               <h2 id="opp-team-name"></h2>
               <p class="hint">Pick your list per opponent, then rate 1–5. Keyboard: <kbd>1</kbd>–<kbd>5</kbd> · arrows between players · <kbd>L</kbd> lists · <kbd>N</kbd>/<kbd>P</kbd> team</p>
-              <div class="rate-warn">
-                <p>Ratings you enter stay in this browser’s local storage, so you can close this tab or open Random stats and still come back. They are not sent to us. Clear saved ratings to reset the form.</p>
-                <button type="button" class="btn ghost compact clear-saved-btn">Clear saved ratings</button>
-              </div>
             </div>
             <div class="board-nav">
               <button type="button" class="btn ghost" id="prev-team">← Previous</button>
