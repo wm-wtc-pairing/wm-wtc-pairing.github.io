@@ -248,7 +248,7 @@ main { padding: 1.25rem 1.5rem 1.25rem; max-width: 1400px; margin: 0 auto; }
   letter-spacing: 0.04em;
 }
 
-select, input[type="search"] {
+select, input[type="search"], textarea {
   appearance: none;
   width: 100%;
   border: 1px solid var(--line);
@@ -260,6 +260,12 @@ select, input[type="search"] {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 500;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 2.6rem;
+  line-height: 1.4;
 }
 
 select:focus, input:focus, .score-btn:focus-visible, .btn:focus-visible, .team-item:focus-visible {
@@ -478,6 +484,8 @@ kbd {
 .rate-side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.45rem; }
 .matchup-list { width: min(100%, 280px); }
 .matchup-list span { color: var(--brass); }
+.matchup-note { grid-column: 1 / -1; }
+.matchup-note span { color: var(--brass); }
 
 .chip {
   display: inline-flex;
@@ -846,7 +854,12 @@ kbd {
 }
 .matrix-live td.blocked { cursor: not-allowed; }
 .matrix-live td:hover:not(.blocked) { filter: brightness(1.12); }
-.pairing-row.is-locked { background: #241d12; margin: 0 -0.4rem; padding-left: 0.4rem; padding-right: 0.4rem; }
+.pairing-row.is-locked, .pairing-block.is-locked {
+  background: #241d12;
+  margin: 0 -0.4rem;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
 .pair-card-head h3 { font-size: 1.35rem; }
 .pair-score { font-size: 1.2rem; font-weight: 700; color: var(--brass); white-space: nowrap; }
 
@@ -871,6 +884,35 @@ kbd {
 .pairing-row {
   padding: 0.55rem 0;
   border-top: 1px solid var(--line);
+}
+.pairing-block { padding-bottom: 0.15rem; }
+.pair-notes {
+  margin: 0.15rem 0 0.55rem;
+  padding: 0.45rem 0.65rem 0.5rem;
+  max-width: 38rem;
+  border-radius: 8px;
+  background: #10262c;
+  border: 1px solid #2d7a84;
+}
+.pair-notes-label {
+  margin: 0 0 0.3rem;
+  font-family: Rajdhani, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7ee0d2;
+}
+.pair-notes p {
+  margin: 0 0 0.32rem;
+  color: #e7fbf7;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.pair-notes p:last-child { margin-bottom: 0; }
+.pairing-block.is-locked .pair-notes {
+  background: #163036;
 }
 .pairing-grid .linkish {
   display: inline;
@@ -1095,4 +1137,5 @@ details.matrix-wrap { margin-top: 0.6rem; color: var(--muted); font-size: 0.85re
   .band-row { grid-template-columns: 1fr; }
   .hbar-row { grid-template-columns: 1fr auto; }
   .hbar-track { grid-column: 1 / -1; }
+  .pair-notes { max-width: 100%; }
 }

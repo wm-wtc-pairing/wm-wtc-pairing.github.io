@@ -1,9 +1,10 @@
 const EXPORT_TYPE = "wtc-matchup-ratings";
-const EXPORT_VERSION = 3;
+const EXPORT_VERSION = 4;
 const SCORE_MIN = 1;
 const SCORE_MAX = 5;
 const SCORE_MISSING = 3;
 const SCORE_TOTAL_MAX = 25;
+const NOTE_MAX = 400;
 
 const state = {
   teams: [],
@@ -12,6 +13,7 @@ const state = {
   ratings: {},
   listRatings: {},
   listChoice: {},
+  notes: {},
   oppTeamId: "",
   focusIdx: 0,
   teamQuery: "",
@@ -34,6 +36,7 @@ const els = {
   progressFill: document.getElementById("rate-progress-fill"),
   progressHint: document.getElementById("rate-progress-hint"),
   exportBtn: document.getElementById("export-btn"),
+  exportExcelBtn: document.getElementById("export-excel-btn"),
   myListsBtn: document.getElementById("my-lists-btn"),
   importOwn: document.getElementById("import-own"),
   rateEmpty: document.getElementById("rate-empty"),
@@ -108,6 +111,40 @@ function normalizeRatingSets(ratings, listRatings, version) {
   };
 }
 
+function sanitizeNotes(map) {
+  const out = {};
+  Object.entries(map || {}).forEach(([id, value]) => {
+    const text = String(value ?? "").trim().slice(0, NOTE_MAX);
+    if (text) out[id] = text;
+  });
+  return out;
+}
+
+function matchupNote(exportFile, oppPlayerId) {
+  return String(exportFile?.notes?.[oppPlayerId] || "").trim();
+}
+
+function notesAgainstTeam(exportFile, oppTeam) {
+  const namesById = Object.fromEntries((oppTeam.players || []).map((p) => [p.id, p.name]));
+  return Object.entries(exportFile?.notes || {})
+    .map(([id, value]) => {
+      const note = String(value || "").trim();
+      const them = namesById[id];
+      if (!them || !note) return null;
+      return { themId: id, them, note };
+    })
+    .filter(Boolean);
+}
+
+function pairingNotesBoxHtml(line) {
+  const items = line.notes || [];
+  if (!items.length) return "";
+  const rows = items.map((item) =>
+    `<p>${escapeHtml(line.us)} vs ${escapeHtml(item.them)}: ${escapeHtml(item.note)}</p>`
+  ).join("");
+  return `<aside class="pair-notes"><p class="pair-notes-label">Notes</p>${rows}</aside>`;
+}
+
 function teamById(id) {
   return state.teams.find((t) => t.id === id);
 }
@@ -128,11 +165,15 @@ function listLabels(player) {
   return (player.lists || []).map((lst, i) => shortListLabel(lst, i));
 }
 
-function shortListLabel(list, index) {
+function fullListLabel(list, index) {
   if (!list) return `List ${index + 1}`;
   const name = list.name || `List ${index + 1}`;
   const caster = list.caster || "";
-  const label = caster && name !== caster ? `${name} · ${caster}` : caster || name;
+  return caster && name !== caster ? `${name} · ${caster}` : caster || name;
+}
+
+function shortListLabel(list, index) {
+  const label = fullListLabel(list, index);
   return label.length > 52 ? `${label.slice(0, 49)}…` : label;
 }
 
@@ -257,6 +298,7 @@ function loadRatings() {
   state.ratings = {};
   state.listRatings = {};
   state.listChoice = {};
+  state.notes = {};
   if (!state.myTeamId || !state.myPlayerId) return;
   try {
     const raw = localStorage.getItem(storageKey(state.myTeamId, state.myPlayerId));
@@ -266,11 +308,13 @@ function loadRatings() {
     state.ratings = normalized.ratings;
     state.listRatings = normalized.listRatings;
     state.listChoice = saved.listChoice || {};
+    state.notes = sanitizeNotes(saved.notes);
     saveRatings();
   } catch {
     state.ratings = {};
     state.listRatings = {};
     state.listChoice = {};
+    state.notes = {};
   }
 }
 
@@ -285,6 +329,7 @@ function saveRatings() {
       ratings: state.ratings,
       listRatings: state.listRatings,
       listChoice: state.listChoice,
+      notes: sanitizeNotes(state.notes),
     })
   );
 }
@@ -303,7 +348,8 @@ function hasSavedRatings() {
     savedRatingKeys().length ||
     Object.keys(state.ratings).length ||
     Object.keys(state.listRatings).length ||
-    Object.keys(state.listChoice).length
+    Object.keys(state.listChoice).length ||
+    Object.keys(state.notes).length
   );
 }
 
@@ -317,6 +363,7 @@ function clearSavedRatings() {
   state.ratings = {};
   state.listRatings = {};
   state.listChoice = {};
+  state.notes = {};
   renderBoard();
   renderTeamList();
   renderProgress();
@@ -369,6 +416,7 @@ function renderProgress() {
     ? `${ratedPlayers} of ${totalPlayers} matchups`
     : "Pick your team and yourself, then rate the opponents.";
   els.exportBtn.disabled = !state.myPlayerId;
+  if (els.exportExcelBtn) els.exportExcelBtn.disabled = !state.myPlayerId;
   if (els.myListsBtn) els.myListsBtn.disabled = !state.myPlayerId;
 }
 
@@ -470,8 +518,19 @@ function renderBoard() {
         </label>
         <div class="scores">${buttons}</div>
       </div>
+      <label class="field matchup-note">
+        <span>Matchup note</span>
+        <textarea data-note="${escapeAttr(p.id)}" rows="2" maxlength="${NOTE_MAX}" placeholder="Optional. Shown at pairing as your player vs this player.">${escapeHtml(state.notes[p.id] || "")}</textarea>
+      </label>
     </article>`;
   }).join("");
+}
+
+function setNote(playerId, value) {
+  const text = String(value ?? "").slice(0, NOTE_MAX);
+  if (text.trim()) state.notes[playerId] = text;
+  else delete state.notes[playerId];
+  saveRatings();
 }
 
 function setRating(playerId, score) {
@@ -508,9 +567,161 @@ function exportOwn() {
     ratings: state.ratings,
     listRatings: state.listRatings,
     listChoice: state.listChoice,
+    notes: sanitizeNotes(state.notes),
   };
   downloadJson(payload, `wtc-ratings-${slug(team.name)}-${slug(player.name)}.json`);
   toast("Ratings export saved.");
+}
+
+function exportOwnExcel() {
+  const team = teamById(state.myTeamId);
+  const player = team?.players.find((p) => p.id === state.myPlayerId);
+  if (!team || !player) return;
+  const blob = new Blob([buildXlsxZip(ratingsWorkbookParts())], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  downloadBlob(blob, `wtc-ratings-${slug(team.name)}-${slug(player.name)}.xlsx`);
+  toast("Excel export saved.");
+}
+
+function chosenListLabel(oppId) {
+  const key = listKeyFor(oppId);
+  if (key === "any") return "Not selected";
+  const idx = Number(key);
+  const list = myPlayerRecord()?.lists?.[idx];
+  if (!Number.isInteger(idx) || !list) return "Not selected";
+  return `List ${idx + 1}: ${fullListLabel(list, idx)}`;
+}
+
+function ratingsWorkbookParts() {
+  const headers = [
+    "Region",
+    "Opponent team",
+    "Opponent",
+    "Army",
+    "Theme",
+    "Their list 1",
+    "Their list 2",
+    "Your list",
+    "Rating",
+    "Any",
+    "List 1",
+    "List 2",
+    "Note",
+  ];
+  const rows = [headers.map((h) => ({ t: "s", v: h, s: 1 }))];
+  opponentTeams().forEach((opp) => {
+    opp.players.forEach((them) => {
+      const lists = them.lists || [];
+      rows.push([
+        { t: "s", v: opp.region },
+        { t: "s", v: opp.name },
+        { t: "s", v: them.name },
+        { t: "s", v: them.army || them.faction || "" },
+        { t: "s", v: them.theme || "" },
+        { t: "s", v: lists[0] ? fullListLabel(lists[0], 0) : "" },
+        { t: "s", v: lists[1] ? fullListLabel(lists[1], 1) : "" },
+        { t: "s", v: chosenListLabel(them.id) },
+        { t: "n", v: ratingFor(them.id) },
+        { t: "n", v: state.ratings[them.id] },
+        { t: "n", v: state.listRatings[0]?.[them.id] },
+        { t: "n", v: state.listRatings[1]?.[them.id] },
+        { t: "s", v: state.notes[them.id] || "" },
+      ]);
+    });
+  });
+  const lastRow = rows.length;
+  const lastCol = "M";
+  const sheetRows = rows.map((row, r) => {
+    const cells = row.map((cell, c) => excelCellXml(cell, c, r)).join("");
+    return `<row r="${r + 1}">${cells}</row>`;
+  }).join("");
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:xml="http://www.w3.org/XML/1998/namespace">
+  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+  <cols>
+    <col min="1" max="1" width="16" customWidth="1"/>
+    <col min="2" max="3" width="28" customWidth="1"/>
+    <col min="4" max="5" width="26" customWidth="1"/>
+    <col min="6" max="8" width="42" customWidth="1"/>
+    <col min="9" max="12" width="10" customWidth="1"/>
+    <col min="13" max="13" width="48" customWidth="1"/>
+  </cols>
+  <sheetData>${sheetRows}</sheetData>
+  <autoFilter ref="A1:${lastCol}${lastRow}"/>
+</worksheet>`;
+  return {
+    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`,
+    "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`,
+    "xl/workbook.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Ratings" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`,
+    "xl/_rels/workbook.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`,
+    "xl/styles.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="2">
+    <font><sz val="11"/><name val="Calibri"/></font>
+    <font><b/><sz val="11"/><name val="Calibri"/></font>
+  </fonts>
+  <fills count="2">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+  </fills>
+  <borders count="1"><border/></borders>
+  <cellStyleXfs count="1"><xf/></cellStyleXfs>
+  <cellXfs count="2">
+    <xf xfId="0"/>
+    <xf xfId="0" fontId="1" applyFont="1"/>
+  </cellXfs>
+</styleSheet>`,
+    "xl/worksheets/sheet1.xml": sheet,
+  };
+}
+
+function excelColName(index) {
+  let n = index + 1;
+  let name = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    name = String.fromCharCode(65 + rem) + name;
+    n = Math.floor((n - 1) / 26);
+  }
+  return name;
+}
+
+function excelCellXml(cell, col, row) {
+  const ref = ` r="${excelColName(col)}${row + 1}"`;
+  const style = cell.s ? ` s="${cell.s}"` : "";
+  if (cell.t === "n") {
+    if (!Number.isInteger(cell.v)) return `<c${ref}${style}/>`;
+    return `<c${ref} t="n"${style}><v>${cell.v}</v></c>`;
+  }
+  const text = excelXmlEscape(cell.v);
+  if (!text) return `<c${ref}${style}/>`;
+  return `<c${ref} t="inlineStr"${style}><is><t xml:space="preserve">${text}</t></is></c>`;
+}
+
+function excelXmlEscape(value) {
+  return String(value ?? "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 async function importOwnFile(file) {
@@ -526,6 +737,7 @@ async function importOwnFile(file) {
   state.ratings = normalized.ratings;
   state.listRatings = normalized.listRatings;
   state.listChoice = data.listChoice || {};
+  state.notes = sanitizeNotes(data.notes);
   saveRatings();
   fillTeamSelect();
   fillPlayerSelect();
@@ -581,6 +793,7 @@ function importPairPayload(data, label = "file") {
     version: EXPORT_VERSION,
     ratings: normalized.ratings,
     listRatings: normalized.listRatings,
+    notes: sanitizeNotes(data.notes),
   });
 }
 
@@ -598,11 +811,11 @@ async function addPairFiles(fileList) {
 }
 
 const EXAMPLE_PAIR_FILES = [
-  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-Snot123.json?v=2",
-  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-Lorand_xor.json?v=2",
-  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-krjugamer.json?v=2",
-  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-GeraldP83.json?v=2",
-  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-Goathead.json?v=2",
+  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-Snot123.json?v=4",
+  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-Lorand_xor.json?v=4",
+  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-krjugamer.json?v=4",
+  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-GeraldP83.json?v=4",
+  "examples/austria-goschnbrecha/wtc-ratings-Austria_Goschnbrecha-Goathead.json?v=4",
 ];
 
 async function loadExamplePairings() {
@@ -859,6 +1072,8 @@ function buildPairResult(ours, opp, pick, locked) {
       score: best.scores[i],
       missing: detail.missing,
       locked: locks[i] === j,
+      note: matchupNote(ours[i], themPlayer.id),
+      notes: notesAgainstTeam(ours[i], opp),
     };
   });
   return {
@@ -1084,14 +1299,17 @@ function renderPairResults() {
           <div>Rating</div>
         </div>
         ${r.lines.map((l, i) => `
-          <div class="pairing-grid pairing-row">
-            <div>
-              <button type="button" class="linkish" data-lists="${escapeAttr(l.usId || "")}">${escapeHtml(l.us)}</button>
-              <div class="pair-sub">${escapeHtml(l.usFaction || "")}</div>
-              ${pairingListHtml(l.usLists)}
+          <div class="pairing-block">
+            <div class="pairing-grid pairing-row">
+              <div>
+                <button type="button" class="linkish" data-lists="${escapeAttr(l.usId || "")}">${escapeHtml(l.us)}</button>
+                <div class="pair-sub">${escapeHtml(l.usFaction || "")}</div>
+                ${pairingListHtml(l.usLists)}
+              </div>
+              ${renderOppCell(r, l, i)}
+              <div class="pair-rating"><span class="score-num ${scoreClass(l.score)}">${l.score}${l.missing ? "*" : ""}</span></div>
             </div>
-            ${renderOppCell(r, l, i)}
-            <div class="pair-rating"><span class="score-num ${scoreClass(l.score)}">${l.score}${l.missing ? "*" : ""}</span></div>
+            ${pairingNotesBoxHtml(l)}
           </div>
         `).join("")}
         <details class="matrix-wrap"${state.openMatrices.has(r.id) ? " open" : ""}>
@@ -1175,17 +1393,20 @@ function renderLivePairing(data) {
         <div>Rating</div>
       </div>
       ${r.lines.map((l, i) => `
-        <div class="pairing-grid pairing-row${locked[i] != null ? " is-locked" : ""}">
-          <div>
-            <button type="button" class="linkish" data-lists="${escapeAttr(l.usId || "")}">${escapeHtml(l.us)}</button>
-            <div class="pair-sub">${escapeHtml(l.usFaction || "")}</div>
-            ${pairingListHtml(l.usLists)}
+        <div class="pairing-block${locked[i] != null ? " is-locked" : ""}">
+          <div class="pairing-grid pairing-row">
+            <div>
+              <button type="button" class="linkish" data-lists="${escapeAttr(l.usId || "")}">${escapeHtml(l.us)}</button>
+              <div class="pair-sub">${escapeHtml(l.usFaction || "")}</div>
+              ${pairingListHtml(l.usLists)}
+            </div>
+            <div>
+              <button type="button" class="linkish" data-lists="${escapeAttr(l.themId || "")}">${escapeHtml(l.them)}</button>
+              <div class="pair-sub">${escapeHtml(l.themFaction || "")}${locked[i] != null ? " · Locked" : " · Auto"}</div>
+            </div>
+            <div class="pair-rating"><span class="score-num ${scoreClass(l.score)}">${l.score}${l.missing ? "*" : ""}</span></div>
           </div>
-          <div>
-            <button type="button" class="linkish" data-lists="${escapeAttr(l.themId || "")}">${escapeHtml(l.them)}</button>
-            <div class="pair-sub">${escapeHtml(l.themFaction || "")}${locked[i] != null ? " · Locked" : " · Auto"}</div>
-          </div>
-          <div class="pair-rating"><span class="score-num ${scoreClass(l.score)}">${l.score}${l.missing ? "*" : ""}</span></div>
+          ${pairingNotesBoxHtml(l)}
         </div>
       `).join("")}
     </div>
@@ -1300,10 +1521,19 @@ function renderPairReportsHtml(reports) {
 function exportPairingsCsv() {
   const data = state.pairResults;
   if (!data) return;
-  const lines = [["Opponent", "Region", "Total", "Min", "Our player", "Their player", "Rating"]];
+  const lines = [["Opponent", "Region", "Total", "Min", "Our player", "Their player", "Rating", "Note"]];
   for (const r of data.results) {
     for (const l of r.lines) {
-      lines.push([r.team, r.region, r.sum, r.min, l.us, l.them, l.score]);
+      lines.push([
+        r.team,
+        r.region,
+        r.sum,
+        r.min,
+        l.us,
+        l.them,
+        l.score,
+        (l.notes || []).map((n) => `${l.us} vs ${n.them}: ${n.note}`).join(" | "),
+      ]);
     }
   }
   const csv = lines.map((row) => row.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\n");
@@ -1347,13 +1577,94 @@ function downloadJson(obj, filename) {
 }
 
 function downloadText(text, filename, type) {
-  const blob = new Blob([text], { type });
+  downloadBlob(new Blob([text], { type }), filename);
+}
+
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i += 1) {
+    let crc = i;
+    for (let j = 0; j < 8; j += 1) crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
+    table[i] = crc;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i += 1) crc = CRC32_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function u16le(n) {
+  const b = new Uint8Array(2);
+  new DataView(b.buffer).setUint16(0, n, true);
+  return b;
+}
+
+function u32le(n) {
+  const b = new Uint8Array(4);
+  new DataView(b.buffer).setUint32(0, n, true);
+  return b;
+}
+
+function concatBytes(parts) {
+  const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
+  let offset = 0;
+  parts.forEach((part) => {
+    out.set(part, offset);
+    offset += part.length;
+  });
+  return out;
+}
+
+function buildXlsxZip(files) {
+  const encoder = new TextEncoder();
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+  Object.entries(files).forEach(([name, xml]) => {
+    const filename = encoder.encode(name);
+    const data = encoder.encode(xml);
+    const crc = crc32(data);
+    const local = concatBytes([
+      new Uint8Array([0x50, 0x4b, 0x03, 0x04]),
+      u16le(20), u16le(0), u16le(0), u16le(0), u16le(0),
+      u32le(crc), u32le(data.length), u32le(data.length),
+      u16le(filename.length), u16le(0),
+      filename,
+      data,
+    ]);
+    const central = concatBytes([
+      new Uint8Array([0x50, 0x4b, 0x01, 0x02]),
+      u16le(20), u16le(20), u16le(0), u16le(0), u16le(0), u16le(0),
+      u32le(crc), u32le(data.length), u32le(data.length),
+      u16le(filename.length), u16le(0), u16le(0), u16le(0), u16le(0),
+      u32le(0), u32le(offset),
+      filename,
+    ]);
+    locals.push(local);
+    centrals.push(central);
+    offset += local.length;
+  });
+  const central = concatBytes(centrals);
+  const eocd = concatBytes([
+    new Uint8Array([0x50, 0x4b, 0x05, 0x06]),
+    u16le(0), u16le(0),
+    u16le(locals.length), u16le(locals.length),
+    u32le(central.length), u32le(offset),
+    u16le(0),
+  ]);
+  return concatBytes([...locals, central, eocd]);
 }
 
 function readJsonFile(file) {
@@ -1417,6 +1728,14 @@ function bindEvents() {
     if (btn) setOppTeam(btn.dataset.team);
   });
 
+  els.playerRows.addEventListener("input", (e) => {
+    const area = e.target.closest("[data-note]");
+    if (!area) return;
+    const row = area.closest(".player-row");
+    if (row) state.focusIdx = Number(row.dataset.idx);
+    setNote(area.dataset.note, area.value);
+  });
+
   els.playerRows.addEventListener("change", (e) => {
     const select = e.target.closest("[data-my-list]");
     if (!select) return;
@@ -1448,6 +1767,7 @@ function bindEvents() {
   els.prevTeam.addEventListener("click", () => shiftOppTeam(-1));
   els.nextTeam.addEventListener("click", () => shiftOppTeam(1));
   els.exportBtn.addEventListener("click", exportOwn);
+  els.exportExcelBtn?.addEventListener("click", exportOwnExcel);
   document.addEventListener("click", (e) => {
     if (e.target.closest(".clear-saved-btn")) clearSavedRatings();
   });

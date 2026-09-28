@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "type": "wtc-matchup-ratings",
   "team": "Austria Goschnbrecha",
   "teamId": "Austria Goschnbrecha",
@@ -722,5 +722,12 @@
     "Buccaneers Amatriciana||GipsyXD": "0",
     "Buccaneers Amatriciana||Luca LampRed8 Girolami": "0",
     "Buccaneers Amatriciana||Firespitter": "1"
+  },
+  "notes": {
+    "USA Pinnacles||Jake VanMeter": "Khymaera is awkward. Ask for a swap unless the rest of the pair is gold.",
+    "USA Pinnacles||Brandon Juris Owens": "Better than Jake. Still not a lock.",
+    "USA Pinnacles||Brad The Iron Lip Park": "I lose this. Swap me off.",
+    "Finland Lapinkellopöllö||Atte Atte Leppälä": "Nightmare. Do not lock this live unless we have to.",
+    "Finland Lapinkellopöllö||Lassi Luukko": "Acceptable Finland table."
   }
 }

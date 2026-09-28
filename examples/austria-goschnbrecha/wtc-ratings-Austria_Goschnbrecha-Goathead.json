@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "type": "wtc-matchup-ratings",
   "team": "Austria Goschnbrecha",
   "teamId": "Austria Goschnbrecha",
@@ -722,5 +722,12 @@
     "Buccaneers Amatriciana||GipsyXD": "1",
     "Buccaneers Amatriciana||Luca LampRed8 Girolami": "1",
     "Buccaneers Amatriciana||Firespitter": "1"
+  },
+  "notes": {
+    "USA Pinnacles||CDemunn": "Watch the feat, do not feat into it.",
+    "USA Pinnacles||Brad The Iron Lip Park": "Pass this if Snot is free. I lose the attrition.",
+    "USA Pinnacles||Dan Golden Lion Riker": "Mirror-ish attrition. Only if Gerald is busy.",
+    "Finland Lapinkellopöllö||Lassi Luukko": "Finland table I can hold if we need a body.",
+    "Finland Lapinkellopöllö||Atte Atte Leppälä": "Do not lock me into Atte."
   }
 }

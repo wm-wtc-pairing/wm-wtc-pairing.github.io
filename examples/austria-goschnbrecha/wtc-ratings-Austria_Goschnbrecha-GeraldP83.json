@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "type": "wtc-matchup-ratings",
   "team": "Austria Goschnbrecha",
   "teamId": "Austria Goschnbrecha",
@@ -722,5 +722,12 @@
     "Buccaneers Amatriciana||GipsyXD": "0",
     "Buccaneers Amatriciana||Luca LampRed8 Girolami": "1",
     "Buccaneers Amatriciana||Firespitter": "0"
+  },
+  "notes": {
+    "USA Pinnacles||Dan Golden Lion Riker": "I want this from Pinnacles. Play the long attrition.",
+    "USA Pinnacles||Brad The Iron Lip Park": "Second choice after Riker.",
+    "USA Pinnacles||Jake VanMeter": "Pass. Lorand or Snot are better.",
+    "Finland Lapinkellopöllö||Jussi Manninen": "Play around the feat, do not feat into it.",
+    "Finland Lapinkellopöllö||Mika Leppiaho": "I can take this if Jussi is gone."
   }
 }

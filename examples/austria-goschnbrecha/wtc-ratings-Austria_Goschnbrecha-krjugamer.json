@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "type": "wtc-matchup-ratings",
   "team": "Austria Goschnbrecha",
   "teamId": "Austria Goschnbrecha",
@@ -722,5 +722,12 @@
     "Buccaneers Amatriciana||GipsyXD": "0",
     "Buccaneers Amatriciana||Luca LampRed8 Girolami": "1",
     "Buccaneers Amatriciana||Firespitter": "1"
+  },
+  "notes": {
+    "USA Pinnacles||Brandon Juris Owens": "Fane of Nyrro is a coin flip. Keep list 1.",
+    "USA Pinnacles||Dan Golden Lion Riker": "I can take Riker.",
+    "USA Pinnacles||CDemunn": "Avoid if Goathead is free.",
+    "Finland Lapinkellopöllö||Mika Leppiaho": "Hard Finland table. Only lock if the matrix says so.",
+    "Finland Lapinkellopöllö||Sami Launonen": "Fine if Mika is taken."
   }
 }
