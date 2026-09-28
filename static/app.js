@@ -1703,6 +1703,8 @@ function bindEvents() {
       });
       document.getElementById("tab-rate").hidden = btn.dataset.tab !== "rate";
       document.getElementById("tab-pair").hidden = btn.dataset.tab !== "pair";
+      const navToggle = document.getElementById("nav-toggle");
+      if (navToggle) navToggle.checked = false;
     });
   });
 
